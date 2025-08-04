@@ -7,7 +7,8 @@ const resetBtn = document.getElementById('resetBtn');
 // Game state
 let clicks = 0;
 let catState = 0;
-let lastClickTime = 0;
+let clickTimer = null;
+let clickCountForDetection = 0;
 let rainbowMode = false;
 
 // Cat states configuration
@@ -27,49 +28,68 @@ function init() {
 // Add event listeners
 function addEventListeners() {
     catEmoji.addEventListener('click', handleCatClick);
-    catEmoji.addEventListener('dblclick', handleDoubleClick);
     resetBtn.addEventListener('click', resetGame);
 }
 
-// Handle cat click
-function handleCatClick() {
-    clicks++;
-    
-    // Check for double-click easter egg
-    const currentTime = new Date().getTime();
-    if (currentTime - lastClickTime < 300) {
-        // Double click detected - trigger rainbow mode
+// Handle cat click (now handles both single and double clicks)
+function handleCatClick(event) {
+    clickCountForDetection++;
+
+    if (clickCountForDetection === 1) {
+        // First click, start timer to check for double-click
+        clickTimer = setTimeout(() => {
+            // This is a single click
+            clicks++;
+            
+            // Progress cat state
+            if (catState < catStates.length - 1) {
+                catState++;
+            }
+            
+            // Add shake animation for angry states
+            if (catState >= 1) {
+                catEmoji.classList.add('shake');
+                setTimeout(() => {
+                    catEmoji.classList.remove('shake');
+                }, 500);
+            }
+            
+            // Add glow effect for final state
+            if (catState === catStates.length - 1) {
+                catEmoji.classList.add('glow');
+            }
+            
+            updateDisplay();
+            playClickSound();
+            
+            // Create particles for single click
+            createParticles();
+            
+            // Show fun fact every 10 clicks
+            checkForFunFact();
+            
+            clickCountForDetection = 0; // Reset for next click sequence
+        }, 300); // 300ms threshold for double click
+    } else if (clickCountForDetection === 2) {
+        // Second click within threshold, it's a double click
+        clearTimeout(clickTimer); // Clear the single click timer
         triggerRainbowMode();
-        return;
+        clickCountForDetection = 0; // Reset for next click sequence
     }
-    lastClickTime = currentTime;
-    
-    // Progress cat state
-    if (catState < catStates.length - 1) {
-        catState++;
-    }
-    
-    // Add shake animation for angry states
-    if (catState >= 1) {
-        catEmoji.classList.add('shake');
-        setTimeout(() => {
-            catEmoji.classList.remove('shake');
-        }, 500);
-    }
-    
-    // Add glow effect for final state
-    if (catState === catStates.length - 1) {
-        catEmoji.classList.add('glow');
-    }
-    
-    updateDisplay();
-    playClickSound();
 }
 
-// Handle double-click easter egg
-function handleDoubleClick(event) {
-    event.preventDefault();
-    triggerRainbowMode();
+// Create particles function
+function createParticles() {
+    const rect = catEmoji.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    
+    const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57'];
+    for (let i = 0; i < 5; i++) {
+        setTimeout(() => {
+            createParticle(x, y, colors[Math.floor(Math.random() * colors.length)]);
+        }, i * 100);
+    }
 }
 
 // Trigger rainbow mode easter egg
@@ -194,12 +214,7 @@ function checkForFunFact() {
     }
 }
 
-// Enhanced click handler with fun facts
-const originalHandleCatClick = handleCatClick;
-handleCatClick = function() {
-    originalHandleCatClick();
-    checkForFunFact();
-};
+// Remove the old enhanced click handler since we now handle everything in handleCatClick
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', init);
@@ -255,23 +270,4 @@ function createParticle(x, y, color) {
     };
 }
 
-// Enhanced click handler with particles
-const enhancedHandleCatClick = function(event) {
-    handleCatClick();
-    
-    // Create particles at click position
-    const rect = catEmoji.getBoundingClientRect();
-    const x = rect.left + rect.width / 2;
-    const y = rect.top + rect.height / 2;
-    
-    const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57'];
-    for (let i = 0; i < 5; i++) {
-        setTimeout(() => {
-            createParticle(x, y, colors[Math.floor(Math.random() * colors.length)]);
-        }, i * 100);
-    }
-};
-
-// Replace original click handler
-catEmoji.removeEventListener('click', handleCatClick);
-catEmoji.addEventListener('click', enhancedHandleCatClick); 
+// Remove the old enhanced click handler since we now handle everything in handleCatClick 
